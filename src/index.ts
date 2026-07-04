@@ -1,4 +1,5 @@
-import { Application, Assets, Sprite, Graphics } from "pixi.js";
+import { Application, Assets, Sprite, Graphics, Point, Matrix } from "pixi.js";
+import { PointHelper } from "./pointhelper";
 
 const CANVAS_SIZE = { w: 800, h: 600 } as const;
 
@@ -6,11 +7,76 @@ const log = <T>(msg: T): void => {
   console.log(`[DEBUG] - ${msg}`);
 };
 
-// Define explicit types for your game objects if managing them globally
+//============GLOBAL OBJECT======================================
 let app: Application;
-// let bunnySprite: Sprite;
-let customShape: Graphics;
-let ball: Graphics;
+
+//============GLOBAL OBJECT======================================
+
+//============ECS================================================
+
+class HasPosition {
+  constructor(public position: Point) {}
+}
+
+class HasVelocity {
+  constructor(public velocity: Point) {}
+}
+
+class HasAcceleration {
+  constructor(public acceleration: Point) {}
+}
+
+type Entity = {
+  index: number;
+  guid: string;
+};
+
+class EntityMananger {
+  private nextEntityId: number;
+  entityPool: Map<number, string>;
+  entitiesSize: number = 100;
+
+  constructor() {
+    this.nextEntityId = 0;
+    this.entityPool = new Map<number, string>();
+    //init entityPool
+    this.initEntityPool();
+  }
+
+  initEntityPool(): void {
+    for (let i = 0; i < this.entitiesSize - 1; i++) {
+      this.entityPool.set(i, "");
+    }
+  }
+
+  private generateGUID(): string {
+    return "xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx".replace(/[xy]/g, (c) => {
+      const r = (Math.random() * 16) | 0;
+      const v = c === "x" ? r : (r & 0x3) | 0x8;
+      return v.toString(16);
+    });
+  }
+
+  addEntity(): Entity {
+    let idx = this.nextEntityId;
+    if (idx > this.entitiesSize) {
+      throw new Error("[EntityPool Error]: Maximum entity capacity reached.");
+    }
+    this.nextEntityId++;
+    let guid = this.generateGUID();
+    this.entityPool.set(idx, guid);
+
+    return { index: idx, guid: guid };
+  }
+}
+
+type Scene = {
+  position: Array<null | HasPosition>;
+  velocity: Array<null | HasVelocity>;
+  acceleration: Array<null | HasAcceleration>;
+};
+
+//============ECS================================================
 
 async function initGame(): Promise<void> {
   // 1. Instantiate the PixiJS Application
@@ -27,42 +93,30 @@ async function initGame(): Promise<void> {
   // 3. Add the canvas element to the HTML page
   document.body.appendChild(app.canvas);
 
-  // // 4. Asynchronously load textures
-  // const texture = await Assets.load('https://pixijs.com');
+  // all code here
+  const entityManager = new EntityMananger();
+  const e01: Entity = entityManager.addEntity();
 
-  // // 5. Create and configure a Sprite
-  // bunnySprite = new Sprite(texture);
-  // bunnySprite.anchor.set(0.5); // Center the origin point of the sprite
-  // bunnySprite.x = app.screen.width / 2;
-  // bunnySprite.y = app.screen.height / 2;
+  for (let entity of entityManager.entityPool) {
+    log<string>(`Index: ${entity[0]}, Guid: ${entity[1]}`);
+  }
 
-  // Add to the main visual stage container
-  // app.stage.addChild(bunnySprite);
+  // update function
+  const update = (dt: number): void => {};
 
-  // 6. Draw vector graphics using the Graphics API
-  customShape = new Graphics();
-  customShape.fill({ color: 0xde3249 });
-  customShape.rect(15, 15, 25, 25);
-  customShape.fill();
-
-  app.stage.addChild(customShape);
-
-  // 7. Draw ball
-  ball = new Graphics();
-  ball.circle(250, 250, 15);
-  ball.fill("#22ff52");
-  ball.setStrokeStyle({ width: 3, color: "#fff" });
-  ball.stroke();
-
-  app.stage.addChild(ball);
+  //draw function
+  const draw = (): void => {};
 
   // 7. Establish the frame update game loop (Ticker)
   app.ticker.add((ticker) => {
     // Delta time is supplied by the frame clock
     const dt = ticker.deltaTime;
 
-    // Rotate the sprite continuously
-    //bunnySprite.rotation += 0.02 * dt;
+    // update
+    update(dt);
+
+    // draw
+    draw();
   });
 }
 
